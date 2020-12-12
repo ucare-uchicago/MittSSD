@@ -24,18 +24,18 @@
 static void pblk_mark_bb(struct pblk *pblk, struct pblk_line *line,
 			 struct ppa_addr *ppa)
 {
-	struct nvm_tgt_dev *dev = pblk->dev;
-	struct nvm_geo *geo = &dev->geo;
-	int pos = pblk_ppa_to_pos(geo, *ppa);
+    struct nvm_tgt_dev *dev = pblk->dev;
+    struct nvm_geo *geo = &dev->geo;
+    int pos = pblk_ppa_to_pos(geo, *ppa);
 
-	pr_debug("pblk: erase failed: line:%d, pos:%d\n", line->id, pos);
-	inc_stat(pblk, &pblk->erase_failed, 0);
+    pr_debug("pblk: erase failed: line:%d, pos:%d\n", line->id, pos);
+    inc_stat(pblk, &pblk->erase_failed, 0);
 
-	if (test_and_set_bit(pos, line->blk_bitmap))
-		pr_err("pblk: attempted to erase bb: line:%d, pos:%d\n",
-							line->id, pos);
+    if (test_and_set_bit(pos, line->blk_bitmap))
+        pr_err("pblk: attempted to erase bb: line:%d, pos:%d\n",
+                line->id, pos);
 
-	pblk_line_run_ws(pblk, ppa, pblk_line_mark_bb);
+    pblk_line_run_ws(pblk, ppa, pblk_line_mark_bb);
 }
 
 static void down_perlun_inf_er(struct pblk *pblk, struct nvm_rq *rqd)
@@ -397,7 +397,7 @@ void pblk_log_read_err(struct pblk *pblk, struct nvm_rq *rqd)
 		pr_err("pblk: unknown read error:%d\n", rqd->error);
 	}
 #ifdef CONFIG_NVM_DEBUG
-	pblk_print_failed_rqd(pblk, rqd, rqd->error);
+    pblk_print_failed_rqd(pblk, rqd, rqd->error);
 #endif
 }
 
@@ -413,7 +413,7 @@ static void up_perlun_inf_wr(struct pblk *pblk, struct nvm_rq *rqd)
     u64 coef_wr;
     s64 wait_time = 0;
 
-	ppa_list = (rqd->nr_ppas > 1) ? rqd->ppa_list : &rqd->ppa_addr;
+    ppa_list = (rqd->nr_ppas > 1) ? rqd->ppa_list : &rqd->ppa_addr;
     atomic_inc(&pblk->nr_tgt_wrs);
     /* Coperd: up per-lun counters */
     for (i = 0; i < rqd->nr_ppas; i += min) {
@@ -452,9 +452,9 @@ static void up_perlun_inf_wr(struct pblk *pblk, struct nvm_rq *rqd)
 void tos_pr_rqd(struct pblk *pblk, struct nvm_rq *rqd, struct ppa_addr p, int se)
 {
     struct nvm_tgt_dev *dev = pblk->dev;
-	struct nvm_geo *geo = &dev->geo;
+    struct nvm_geo *geo = &dev->geo;
     struct nvm_dev_map *dev_map = dev->map;
-    struct nvm_ch_map *ch_map; 
+    struct nvm_ch_map *ch_map;
     int lun_id;
     struct pblk_lun *tlun;
     int lun_off;
@@ -475,22 +475,22 @@ void tos_pr_rqd(struct pblk *pblk, struct nvm_rq *rqd, struct ppa_addr p, int se
     lun = p.g.lun + lun_off;
 
     switch (rqd->opcode) {
-    case NVM_OP_PREAD:
-        if (pblk->tos_pr_lat == TOS_PR_RDONLY)
-            do_pr = 1;
-        strcpy(s, "subread-");
-        lun_id = p.g.lun;
-        break;
-    case NVM_OP_PWRITE:
-        if (pblk->tos_pr_lat == TOS_PR_WRONLY)
-            do_pr = 1;
-        strcpy(s, "subwrite-");
-        break;
-    case NVM_OP_ERASE:
-        if (pblk->tos_pr_lat == TOS_PR_ERONLY)
-            do_pr = 1;
-        strcpy(s, "erase-");
-        break;
+        case NVM_OP_PREAD:
+            if (pblk->tos_pr_lat == TOS_PR_RDONLY)
+                do_pr = 1;
+            strcpy(s, "subread-");
+            lun_id = p.g.lun;
+            break;
+        case NVM_OP_PWRITE:
+            if (pblk->tos_pr_lat == TOS_PR_WRONLY)
+                do_pr = 1;
+            strcpy(s, "subwrite-");
+            break;
+        case NVM_OP_ERASE:
+            if (pblk->tos_pr_lat == TOS_PR_ERONLY)
+                do_pr = 1;
+            strcpy(s, "erase-");
+            break;
     }
 
     if (pblk->tos_pr_lat == TOS_PR_ALL)
@@ -500,46 +500,46 @@ void tos_pr_rqd(struct pblk *pblk, struct nvm_rq *rqd, struct ppa_addr p, int se
         return;
 
     switch (se) {
-    case 0:
-        strcat(s, "s");
-        break;
-    case 1:
-        strcat(s, "e");
-        break;
+        case 0:
+            strcat(s, "s");
+            break;
+        case 1:
+            strcat(s, "e");
+            break;
     }
 
     tlun = &pblk->luns[lun_id];
 
     switch (rqd->opcode) {
-    case NVM_OP_PREAD:
-        tch = lun_id / geo->luns_per_chnl;
-        tlun_id = lun_id % geo->luns_per_chnl;
-        ch_map = &dev_map->chnls[tch];
-        lun_off = ch_map->lun_offs[tlun_id];
-        
-        pt = tlun->last_rd_lat_us;
-        if (se == 0)
-            pt = ktime_to_us(tlun->last_rd_stime);
-        pr_debug("Coperd,%s,%d,(%u %d),%d,%lld,%lld\n", s, rqd->id,
-                tch + ch_map->ch_off, tlun_id + lun_off,
-                rqd->lun_dist[lun_id], tlun->plat_us, pt);
-        break;
-    case NVM_OP_PWRITE:
-        //pt = tlun->last_wr_lat_us;
-        pt = rqd->plat_us;
-        if (se == 0)
-            pt = ktime_to_us(tlun->last_wr_stime);
-        pr_debug("Coperd,%s,%d,(%u %u %u %u %u %u),%lld,%lld\n", s, rqd->id, ch, lun,
-                p.g.pl, p.g.blk, p.g.pg, p.g.sec, pt, rqd->tlat_us);
-        break;
-    case NVM_OP_ERASE:
-        //pt = tlun->last_er_lat_us;
-        pt = rqd->plat_us;
-        if (se == 0)
-            pt = ktime_to_us(tlun->last_er_stime);
-        pr_debug("Coperd,%s,%d,(%u %u %u %u %u %u),%lld,%lld\n", s, rqd->id, ch, lun,
-                p.g.pl, p.g.blk, p.g.pg, p.g.sec, pt, rqd->tlat_us);
-        break;
+        case NVM_OP_PREAD:
+            tch = lun_id / geo->luns_per_chnl;
+            tlun_id = lun_id % geo->luns_per_chnl;
+            ch_map = &dev_map->chnls[tch];
+            lun_off = ch_map->lun_offs[tlun_id];
+
+            pt = tlun->last_rd_lat_us;
+            if (se == 0)
+                pt = ktime_to_us(tlun->last_rd_stime);
+            pr_debug("Coperd,%s,%d,(%u %d),%d,%lld,%lld\n", s, rqd->id,
+                    tch + ch_map->ch_off, tlun_id + lun_off,
+                    rqd->lun_dist[lun_id], tlun->plat_us, pt);
+            break;
+        case NVM_OP_PWRITE:
+            //pt = tlun->last_wr_lat_us;
+            pt = rqd->plat_us;
+            if (se == 0)
+                pt = ktime_to_us(tlun->last_wr_stime);
+            pr_debug("Coperd,%s,%d,(%u %u %u %u %u %u),%lld,%lld\n", s, rqd->id, ch, lun,
+                    p.g.pl, p.g.blk, p.g.pg, p.g.sec, pt, rqd->tlat_us);
+            break;
+        case NVM_OP_ERASE:
+            //pt = tlun->last_er_lat_us;
+            pt = rqd->plat_us;
+            if (se == 0)
+                pt = ktime_to_us(tlun->last_er_stime);
+            pr_debug("Coperd,%s,%d,(%u %u %u %u %u %u),%lld,%lld\n", s, rqd->id, ch, lun,
+                    p.g.pl, p.g.blk, p.g.pg, p.g.sec, pt, rqd->tlat_us);
+            break;
     }
 }
 
@@ -766,7 +766,7 @@ static void tos_dump_freq_info(struct pblk *pblk, struct pblk_lun *tlun, int id)
     if (pblk->tos_debug && (!(nr_tt_rds % pblk->tos_debug_freq))) {
         pr_debug("/////////////LUN[%s,%d]//////////////\n", dev->name, id);
         pr_debug("Coperd,nr_tt_rds:%d,nr_cc_rds:%d,nr_tt_wrs:%d,nr_tt_ers:%d\n"
-                "inf_rd:%d,inf_wr:%d,inf_er:%d", nr_tt_rds, 
+                "inf_rd:%d,inf_wr:%d,inf_er:%d", nr_tt_rds,
                 atomic_read(&pblk->nr_cc_rds), atomic_read(&tlun->nr_tt_wrs),
                 atomic_read(&tlun->nr_tt_ers), atomic_read(&tlun->inf_rd),
                 atomic_read(&tlun->inf_wr), atomic_read(&tlun->inf_er));
@@ -781,7 +781,7 @@ static void tos_dump_freq_info(struct pblk *pblk, struct pblk_lun *tlun, int id)
     }
 }
 
-/* 
+/*
  * Coperd: currently it's safe to assume that r_ctx exists for full/partial
  * user reads, what about emeta/smeta reads?
  */
@@ -831,7 +831,7 @@ static void up_perlun_inf_rd(struct pblk *pblk, struct nvm_rq *rqd)
         /* Coperd: is it possible reading multiple sectors from diff pgs ?? */
         if (rqd->lun_dist[bit] <= geo->sec_per_pg)
             rqd->lun_dist[bit] = 1;
-        else 
+        else
             rqd->lun_dist[bit] = rqd->lun_dist[bit] / geo->sec_per_pg;
         nr_ef_pgs = rqd->lun_dist[bit];
 
@@ -892,7 +892,7 @@ static int lat_predict_perlun(struct pblk *pblk, struct pblk_lun *lun,
     struct nvm_tgt_dev *dev = pblk->dev;
     struct nvm_geo *geo = &dev->geo;
     struct nvm_dev_map *dev_map = dev->map;
-    struct nvm_ch_map *ch_map = &dev_map->chnls[lun->bppa.g.ch]; 
+    struct nvm_ch_map *ch_map = &dev_map->chnls[lun->bppa.g.ch];
     int coef_rd = pblk->coef_rd;
     int coef_wr = pblk->coef_lp_wr;
     int coef_er = pblk->coef_er;
@@ -954,7 +954,7 @@ static int lat_predict_perlun(struct pblk *pblk, struct pblk_lun *lun,
         er_remt -= ktime_to_us(ktime_sub(now, lun->last_er_stime));
         if (er_remt < 0)
             er_remt = 0;
-    } 
+    }
 
     plat += rd_remt + wr_remt + er_remt;
 
@@ -973,9 +973,9 @@ static int lat_predict_perlun(struct pblk *pblk, struct pblk_lun *lun,
 }
 #endif
 
-/* 
+/*
  * Coperd: judge whether to return EBUSY for this request according to current
- * perlun inflight I/Os info 
+ * perlun inflight I/Os info
  *
  * NON-ZERO return value means we want to return EBUSY
  */
@@ -1022,17 +1022,17 @@ static int tos_busy(struct pblk *pblk, struct nvm_rq *rqd)
 
 int pblk_submit_io(struct pblk *pblk, struct nvm_rq *rqd)
 {
-	struct nvm_tgt_dev *dev = pblk->dev;
+    struct nvm_tgt_dev *dev = pblk->dev;
 
 #ifdef CONFIG_NVM_DEBUG
-	struct ppa_addr *ppa_list;
+    struct ppa_addr *ppa_list;
     int i;
 
-	ppa_list = (rqd->nr_ppas > 1) ? rqd->ppa_list : &rqd->ppa_addr;
-	if (pblk_boundary_checks(dev, ppa_list, rqd->nr_ppas)) {
-		WARN_ON(1);
-		return -EINVAL;
-	}
+    ppa_list = (rqd->nr_ppas > 1) ? rqd->ppa_list : &rqd->ppa_addr;
+    if (pblk_boundary_checks(dev, ppa_list, rqd->nr_ppas)) {
+        WARN_ON(1);
+        return -EINVAL;
+    }
 
     /* Coperd: record the start time of this request */
     rqd->stime = ktime_get();
@@ -1041,24 +1041,24 @@ int pblk_submit_io(struct pblk *pblk, struct nvm_rq *rqd)
     atomic_inc(&pblk->tos_rqd_id);
     rqd->id = atomic_read(&pblk->tos_rqd_id);
 
-	if (rqd->opcode == NVM_OP_PWRITE) {
-		struct pblk_line *line;
-		struct ppa_addr ppa;
+    if (rqd->opcode == NVM_OP_PWRITE) {
+        struct pblk_line *line;
+        struct ppa_addr ppa;
 
-		for (i = 0; i < rqd->nr_ppas; i++) {
-			ppa = ppa_list[i];
-			line = &pblk->lines[pblk_ppa_to_line(ppa)];
+        for (i = 0; i < rqd->nr_ppas; i++) {
+            ppa = ppa_list[i];
+            line = &pblk->lines[pblk_ppa_to_line(ppa)];
 
-			spin_lock(&line->lock);
-			if (line->state != PBLK_LINESTATE_OPEN) {
-				pr_err("pblk: bad ppa: line:%d,state:%d\n",
-							line->id, line->state);
-				WARN_ON(1);
-				spin_unlock(&line->lock);
-				return -EINVAL;
-			}
-			spin_unlock(&line->lock);
-		}
+            spin_lock(&line->lock);
+            if (line->state != PBLK_LINESTATE_OPEN) {
+                pr_err("pblk: bad ppa: line:%d,state:%d\n",
+                        line->id, line->state);
+                WARN_ON(1);
+                spin_unlock(&line->lock);
+                return -EINVAL;
+            }
+            spin_unlock(&line->lock);
+        }
 
         up_perlun_inf_wr(pblk, rqd);
 
@@ -1085,7 +1085,7 @@ int pblk_submit_io(struct pblk *pblk, struct nvm_rq *rqd)
     }
 #endif
 
-	return nvm_submit_io(dev, rqd);
+    return nvm_submit_io(dev, rqd);
 }
 
 struct bio *pblk_bio_map_addr(struct pblk *pblk, void *data,
