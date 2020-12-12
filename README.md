@@ -36,13 +36,33 @@ the bib entry is:
 You need an OCSSD to run the code.
 
 
-### Compile the code
+### Compilation
 
 ```
 make defconfig
+# then ``make menuconfig`` to manually enable pblk and other drivers you need
 make -j8
 sudo make modules_install
 sudo make install
 ```
 
 This will install a new kernel to your system. Reboot your host system to run it.
+
+### MittSSD /sys interface
+
+MittSSD provides some ``/sys`` interface for interactions with LightNVM from
+user space. Checkout the code ``drivers/lightnvm/pblk-sys.c`` for MittSSD
+related ones.
+
+### MittSSD code structure:
+
+- syscall and file system layers: added logics to pass the SLO and
+  fast-rejection information through the entire storage stack
+
+- LightNVM: serving as the host-managed ``device`` layer. MittSSD extends it
+  with a fine-grnular latency monitoring module for accurate SLO prediction,
+  based on pre-profiled NAND level latencies.
+
+- The ``read()`` syscall is extended with a ``SLO``  parameter, upon receiving
+  MittSSD returned ``failure``, the application could retry a ``read()`` from
+  the replicas.
